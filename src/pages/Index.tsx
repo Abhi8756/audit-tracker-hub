@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchBar } from "@/components/SearchBar";
@@ -6,7 +7,7 @@ import { AuditTable } from "@/components/AuditTable";
 import { AuditStats } from "@/components/AuditStats";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, MessageCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/use-toast";
 
 type Audit = {
   id: number;
@@ -79,6 +81,15 @@ const Index = () => {
     result: "Passed",
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const { toast } = useToast();
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
 
   const handleFileUpload = (id: number, file: File) => {
     const url = URL.createObjectURL(file);
@@ -88,6 +99,15 @@ const Index = () => {
   };
 
   const handleAddAudit = () => {
+    if (!newAudit.testType) {
+      toast({
+        title: "Error",
+        description: "Please enter a test type",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const audit: Audit = {
       id: audits.length + 1,
       date: new Date().toISOString().split('T')[0],
@@ -95,12 +115,19 @@ const Index = () => {
       result: newAudit.result,
       maintenanceNeeded: newAudit.result === "Failed",
       maintenanceScheduled: null,
-      report: `report-${audits.length + 1}.pdf`,
+      report: selectedFile ? URL.createObjectURL(selectedFile) : null,
       completed: false,
     };
+    
     setAudits(prevAudits => [...prevAudits, audit]);
     setNewAudit({ testType: "", result: "Passed" });
+    setSelectedFile(null);
     setIsDialogOpen(false);
+    
+    toast({
+      title: "Success",
+      description: "New audit has been created",
+    });
   };
 
   const handleMaintenanceChange = (id: number, checked: boolean) => {
@@ -168,7 +195,15 @@ const Index = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button onClick={handleAddAudit}>Add Audit</Button>
+                    <div>
+                      <label className="text-sm font-medium">Upload Report</label>
+                      <Input
+                        type="file"
+                        onChange={handleFileSelect}
+                        className="mt-1"
+                      />
+                    </div>
+                    <Button onClick={handleAddAudit} className="w-full">Add Audit</Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -209,6 +244,14 @@ const Index = () => {
                 onFileUpload={handleFileUpload}
               />
             </div>
+
+            {/* Chatbot Button */}
+            <Button 
+              className="fixed bottom-6 right-6 rounded-full w-12 h-12 p-0 shadow-lg hover:shadow-xl transition-shadow"
+              onClick={() => window.open('https://chat.openai.com', '_blank')}
+            >
+              <MessageCircle className="h-6 w-6" />
+            </Button>
           </div>
         </div>
       </div>
