@@ -2,7 +2,9 @@
 import { useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchBar } from "@/components/SearchBar";
-import { AuditCard } from "@/components/AuditCard";
+import { SidebarNav } from "@/components/SidebarNav";
+import { AuditTable } from "@/components/AuditTable";
+import { AuditStats } from "@/components/AuditStats";
 import {
   Select,
   SelectContent,
@@ -10,82 +12,93 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Mock data
+// Mock data for demonstration
 const mockAudits = [
   {
     id: 1,
-    title: "Highway Bridge Construction",
-    status: "ongoing",
-    progress: 75,
     date: "2024-03-15",
     testType: "Soil Compaction",
+    result: "Passed",
+    maintenanceNeeded: false,
+    maintenanceScheduled: null,
+    report: "soil-report-1.pdf",
   },
   {
     id: 2,
-    title: "City Park Renovation",
-    status: "completed",
-    progress: 100,
     date: "2024-03-10",
     testType: "Concrete Strength",
+    result: "Failed",
+    maintenanceNeeded: true,
+    maintenanceScheduled: "2024-03-20",
+    report: "concrete-report-1.pdf",
   },
   {
     id: 3,
-    title: "Municipal Building",
-    status: "scheduled",
-    progress: 0,
-    date: "2024-03-20",
+    date: "2024-03-08",
     testType: "Foundation Analysis",
+    result: "Passed",
+    maintenanceNeeded: false,
+    maintenanceScheduled: null,
+    report: "foundation-report-1.pdf",
   },
 ] as const;
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [currentTab, setCurrentTab] = useState("ongoing");
 
+  // Filter audits based on search query and status
   const filteredAudits = mockAudits.filter((audit) => {
-    const matchesSearch = audit.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || audit.status === statusFilter;
+    const matchesSearch = 
+      audit.testType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      audit.result.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || audit.result.toLowerCase() === statusFilter.toLowerCase();
     return matchesSearch && matchesStatus;
   });
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold heading-gradient">Audit Tracker</h1>
-          <ThemeToggle />
+    <div className="flex min-h-screen bg-background">
+      <SidebarNav />
+      <div className="flex-1 space-y-8 p-8 pt-6">
+        <div className="flex items-center justify-between space-y-2">
+          <h2 className="text-3xl font-bold tracking-tight heading-gradient">Audit Maintenance</h2>
+          <div className="flex items-center space-x-2">
+            <SearchBar onSearch={setSearchQuery} />
+            <ThemeToggle />
+          </div>
         </div>
 
-        {/* Search and Filter Section */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          <SearchBar onSearch={setSearchQuery} />
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="ongoing">Ongoing</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="scheduled">Scheduled</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between gap-4">
+            <Tabs defaultValue={currentTab} className="w-[400px]" onValueChange={setCurrentTab}>
+              <TabsList>
+                <TabsTrigger value="ongoing">Ongoing</TabsTrigger>
+                <TabsTrigger value="completed">Completed</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Results</SelectItem>
+                <SelectItem value="passed">Passed</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Audit Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAudits.map((audit) => (
-            <AuditCard
-              key={audit.id}
-              title={audit.title}
-              status={audit.status}
-              progress={audit.progress}
-              date={audit.date}
-              testType={audit.testType}
-            />
-          ))}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <AuditStats audits={filteredAudits} />
+          </div>
+
+          <div className="rounded-md border">
+            <AuditTable audits={filteredAudits} />
+          </div>
         </div>
       </div>
     </div>
