@@ -1,6 +1,6 @@
 
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar as CalendarIcon, Download } from "lucide-react";
+import { Calendar as CalendarIcon, Download, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
 
 type Audit = {
   id: number;
@@ -25,7 +26,7 @@ type Audit = {
   result: string;
   maintenanceNeeded: boolean;
   maintenanceScheduled: string | null;
-  report: string;
+  report: string | null;
   completed: boolean;
 };
 
@@ -33,9 +34,17 @@ interface AuditTableProps {
   audits: Audit[];
   onMaintenanceChange: (id: number, checked: boolean) => void;
   onMaintenanceScheduleChange: (id: number, date: Date | undefined) => void;
+  onFileUpload: (id: number, file: File) => void;
 }
 
-export function AuditTable({ audits, onMaintenanceChange, onMaintenanceScheduleChange }: AuditTableProps) {
+export function AuditTable({ audits, onMaintenanceChange, onMaintenanceScheduleChange, onFileUpload }: AuditTableProps) {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, auditId: number) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      onFileUpload(auditId, file);
+    }
+  };
+
   return (
     <div className="w-full overflow-auto">
       <Table>
@@ -69,7 +78,6 @@ export function AuditTable({ audits, onMaintenanceChange, onMaintenanceScheduleC
                 <Checkbox
                   checked={audit.maintenanceNeeded}
                   onCheckedChange={(checked) => onMaintenanceChange(audit.id, checked as boolean)}
-                  disabled={audit.result === "Passed" && !audit.maintenanceNeeded}
                 />
               </TableCell>
               <TableCell>
@@ -103,10 +111,29 @@ export function AuditTable({ audits, onMaintenanceChange, onMaintenanceScheduleC
                 </Popover>
               </TableCell>
               <TableCell>
-                <Button variant="ghost" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
+                {audit.report ? (
+                  <Button variant="ghost" size="sm" onClick={() => window.open(audit.report!, '_blank')}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                ) : (
+                  <div className="flex items-center">
+                    <Input
+                      type="file"
+                      onChange={(e) => handleFileChange(e, audit.id)}
+                      className="hidden"
+                      id={`file-upload-${audit.id}`}
+                    />
+                    <label htmlFor={`file-upload-${audit.id}`}>
+                      <Button variant="ghost" size="sm" asChild>
+                        <span>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload Report
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+                )}
               </TableCell>
             </TableRow>
           ))}

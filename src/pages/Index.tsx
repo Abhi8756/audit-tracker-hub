@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchBar } from "@/components/SearchBar";
@@ -32,7 +31,7 @@ type Audit = {
   result: string;
   maintenanceNeeded: boolean;
   maintenanceScheduled: string | null;
-  report: string;
+  report: string | null;
   completed: boolean;
 };
 
@@ -45,7 +44,7 @@ const initialAudits: Audit[] = [
     result: "Passed",
     maintenanceNeeded: false,
     maintenanceScheduled: null,
-    report: "soil-report-1.pdf",
+    report: null,
     completed: false,
   },
   {
@@ -81,15 +80,12 @@ const Index = () => {
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Filter audits based on search query, status, and completed status
-  const filteredAudits = audits.filter((audit) => {
-    const matchesSearch = 
-      audit.testType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      audit.result.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || audit.result.toLowerCase() === statusFilter.toLowerCase();
-    const matchesTab = currentTab === "ongoing" ? !audit.completed : audit.completed;
-    return matchesSearch && matchesStatus && matchesTab;
-  });
+  const handleFileUpload = (id: number, file: File) => {
+    const url = URL.createObjectURL(file);
+    setAudits(prevAudits => prevAudits.map(audit => 
+      audit.id === id ? { ...audit, report: url } : audit
+    ));
+  };
 
   const handleAddAudit = () => {
     const audit: Audit = {
@@ -119,9 +115,18 @@ const Index = () => {
     ));
   };
 
+  const filteredAudits = audits.filter((audit) => {
+    const matchesSearch = 
+      audit.testType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      audit.result.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || audit.result.toLowerCase() === statusFilter.toLowerCase();
+    const matchesTab = currentTab === "ongoing" ? !audit.completed : audit.completed;
+    return matchesSearch && matchesStatus && matchesTab;
+  });
+
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background">
+      <div className="flex min-h-screen w-full bg-background text-foreground">
         <SidebarNav />
         <div className="flex-1 space-y-8 p-8 pt-6">
           <div className="flex items-center justify-between space-y-2">
@@ -201,6 +206,7 @@ const Index = () => {
                 audits={filteredAudits}
                 onMaintenanceChange={handleMaintenanceChange}
                 onMaintenanceScheduleChange={handleMaintenanceScheduleChange}
+                onFileUpload={handleFileUpload}
               />
             </div>
           </div>
@@ -211,4 +217,3 @@ const Index = () => {
 };
 
 export default Index;
-
