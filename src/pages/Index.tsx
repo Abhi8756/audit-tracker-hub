@@ -25,8 +25,19 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 
+type Audit = {
+  id: number;
+  date: string;
+  testType: string;
+  result: string;
+  maintenanceNeeded: boolean;
+  maintenanceScheduled: string | null;
+  report: string;
+  completed: boolean;
+};
+
 // Mock data for demonstration
-const initialAudits = [
+const initialAudits: Audit[] = [
   {
     id: 1,
     date: "2024-03-15",
@@ -57,13 +68,13 @@ const initialAudits = [
     report: "foundation-report-1.pdf",
     completed: true,
   },
-] as const;
+];
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentTab, setCurrentTab] = useState("ongoing");
-  const [audits, setAudits] = useState(initialAudits);
+  const [audits, setAudits] = useState<Audit[]>(initialAudits);
   const [newAudit, setNewAudit] = useState({
     testType: "",
     result: "Passed",
@@ -81,7 +92,7 @@ const Index = () => {
   });
 
   const handleAddAudit = () => {
-    const audit = {
+    const audit: Audit = {
       id: audits.length + 1,
       date: new Date().toISOString().split('T')[0],
       testType: newAudit.testType,
@@ -91,19 +102,19 @@ const Index = () => {
       report: `report-${audits.length + 1}.pdf`,
       completed: false,
     };
-    setAudits([...audits, audit]);
+    setAudits(prevAudits => [...prevAudits, audit]);
     setNewAudit({ testType: "", result: "Passed" });
     setIsDialogOpen(false);
   };
 
   const handleMaintenanceChange = (id: number, checked: boolean) => {
-    setAudits(audits.map(audit => 
+    setAudits(prevAudits => prevAudits.map(audit => 
       audit.id === id ? { ...audit, maintenanceNeeded: checked } : audit
     ));
   };
 
   const handleMaintenanceScheduleChange = (id: number, date: Date | undefined) => {
-    setAudits(audits.map(audit => 
+    setAudits(prevAudits => prevAudits.map(audit => 
       audit.id === id ? { ...audit, maintenanceScheduled: date?.toISOString().split('T')[0] || null } : audit
     ));
   };
@@ -200,3 +211,4 @@ const Index = () => {
 };
 
 export default Index;
+
