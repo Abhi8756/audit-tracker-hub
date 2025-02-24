@@ -26,13 +26,16 @@ type Audit = {
   maintenanceNeeded: boolean;
   maintenanceScheduled: string | null;
   report: string;
+  completed: boolean;
 };
 
 interface AuditTableProps {
   audits: Audit[];
+  onMaintenanceChange: (id: number, checked: boolean) => void;
+  onMaintenanceScheduleChange: (id: number, date: Date | undefined) => void;
 }
 
-export function AuditTable({ audits }: AuditTableProps) {
+export function AuditTable({ audits, onMaintenanceChange, onMaintenanceScheduleChange }: AuditTableProps) {
   return (
     <div className="w-full overflow-auto">
       <Table>
@@ -65,7 +68,8 @@ export function AuditTable({ audits }: AuditTableProps) {
               <TableCell>
                 <Checkbox
                   checked={audit.maintenanceNeeded}
-                  onCheckedChange={() => {}}
+                  onCheckedChange={(checked) => onMaintenanceChange(audit.id, checked as boolean)}
+                  disabled={audit.result === "Passed" && !audit.maintenanceNeeded}
                 />
               </TableCell>
               <TableCell>
@@ -76,6 +80,7 @@ export function AuditTable({ audits }: AuditTableProps) {
                       className={
                         !audit.maintenanceScheduled ? "text-muted-foreground" : ""
                       }
+                      disabled={!audit.maintenanceNeeded}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {audit.maintenanceScheduled
@@ -91,7 +96,8 @@ export function AuditTable({ audits }: AuditTableProps) {
                           ? new Date(audit.maintenanceScheduled)
                           : undefined
                       }
-                      onSelect={() => {}}
+                      onSelect={(date) => onMaintenanceScheduleChange(audit.id, date)}
+                      disabled={(date) => date < new Date()}
                     />
                   </PopoverContent>
                 </Popover>
