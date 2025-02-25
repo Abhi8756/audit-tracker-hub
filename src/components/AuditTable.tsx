@@ -18,33 +18,15 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
-
-type Audit = {
-  id: number;
-  date: string;
-  testType: string;
-  result: string;
-  maintenanceNeeded: boolean;
-  maintenanceScheduled: string | null;
-  report: string | null;
-  completed: boolean;
-};
+import { Audit } from "@/types/audit";
 
 interface AuditTableProps {
   audits: Audit[];
   onMaintenanceChange: (id: number, checked: boolean) => void;
-  onMaintenanceScheduleChange: (id: number, date: Date | undefined) => void;
-  onFileUpload: (id: number, file: File) => void;
+  onMaintenanceScheduleChange: (id: number, date: string | null) => void;
 }
 
-export function AuditTable({ audits, onMaintenanceChange, onMaintenanceScheduleChange, onFileUpload }: AuditTableProps) {
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, auditId: number) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      onFileUpload(auditId, file);
-    }
-  };
-
+export function AuditTable({ audits, onMaintenanceChange, onMaintenanceScheduleChange }: AuditTableProps) {
   return (
     <div className="w-full overflow-auto">
       <Table>
@@ -62,7 +44,7 @@ export function AuditTable({ audits, onMaintenanceChange, onMaintenanceScheduleC
           {audits.map((audit) => (
             <TableRow key={audit.id}>
               <TableCell>{format(new Date(audit.date), "PPP")}</TableCell>
-              <TableCell>{audit.testType}</TableCell>
+              <TableCell>{audit.test_type}</TableCell>
               <TableCell>
                 <span
                   className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
@@ -76,7 +58,7 @@ export function AuditTable({ audits, onMaintenanceChange, onMaintenanceScheduleC
               </TableCell>
               <TableCell>
                 <Checkbox
-                  checked={audit.maintenanceNeeded}
+                  checked={audit.maintenance_needed}
                   onCheckedChange={(checked) => onMaintenanceChange(audit.id, checked as boolean)}
                 />
               </TableCell>
@@ -86,13 +68,13 @@ export function AuditTable({ audits, onMaintenanceChange, onMaintenanceScheduleC
                     <Button
                       variant="outline"
                       className={
-                        !audit.maintenanceScheduled ? "text-muted-foreground" : ""
+                        !audit.maintenance_scheduled ? "text-muted-foreground" : ""
                       }
-                      disabled={!audit.maintenanceNeeded}
+                      disabled={!audit.maintenance_needed}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {audit.maintenanceScheduled
-                        ? format(new Date(audit.maintenanceScheduled), "PPP")
+                      {audit.maintenance_scheduled
+                        ? format(new Date(audit.maintenance_scheduled), "PPP")
                         : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
@@ -100,36 +82,30 @@ export function AuditTable({ audits, onMaintenanceChange, onMaintenanceScheduleC
                     <Calendar
                       mode="single"
                       selected={
-                        audit.maintenanceScheduled
-                          ? new Date(audit.maintenanceScheduled)
+                        audit.maintenance_scheduled
+                          ? new Date(audit.maintenance_scheduled)
                           : undefined
                       }
-                      onSelect={(date) => onMaintenanceScheduleChange(audit.id, date)}
+                      onSelect={(date) => 
+                        onMaintenanceScheduleChange(audit.id, date ? date.toISOString().split('T')[0] : null)
+                      }
                       disabled={(date) => date < new Date()}
                     />
                   </PopoverContent>
                 </Popover>
               </TableCell>
               <TableCell>
-                {audit.report ? (
-                  <Button variant="ghost" size="sm" onClick={() => window.open(audit.report!, '_blank')}>
+                {audit.report_url ? (
+                  <Button variant="ghost" size="sm" onClick={() => window.open(audit.report_url!, '_blank')}>
                     <Download className="h-4 w-4 mr-2" />
                     Download
                   </Button>
                 ) : (
                   <div className="flex items-center">
-                    <Input
-                      type="file"
-                      onChange={(e) => handleFileChange(e, audit.id)}
-                      className="hidden"
-                      id={`file-upload-${audit.id}`}
-                    />
-                    <label htmlFor={`file-upload-${audit.id}`}>
-                      <Button variant="ghost" size="sm" asChild>
-                        <span>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Report
-                        </span>
+                    <label className="cursor-pointer">
+                      <Button variant="ghost" size="sm">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Report
                       </Button>
                     </label>
                   </div>

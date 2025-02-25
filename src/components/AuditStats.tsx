@@ -6,13 +6,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CheckCircle, AlertCircle, Calendar, Clock } from "lucide-react";
+import { Audit } from "@/types/audit";
 
 interface AuditStatsProps {
-  audits: Array<{
-    result: string;
-    maintenanceNeeded: boolean;
-    maintenanceScheduled: string | null;
-  }>;
+  audits: Audit[];
 }
 
 export function AuditStats({ audits }: AuditStatsProps) {
@@ -20,7 +17,7 @@ export function AuditStats({ audits }: AuditStatsProps) {
   const passedAudits = audits.filter((audit) => audit.result === "Passed").length;
   const failedAudits = audits.filter((audit) => audit.result === "Failed").length;
   const pendingMaintenance = audits.filter(
-    (audit) => audit.maintenanceNeeded && !audit.maintenanceScheduled
+    (audit) => audit.maintenance_needed && !audit.maintenance_scheduled
   ).length;
 
   const stats = [
@@ -41,7 +38,7 @@ export function AuditStats({ audits }: AuditStatsProps) {
     },
     {
       title: "Scheduled",
-      value: audits.filter((a) => a.maintenanceScheduled).length,
+      value: audits.filter((a) => a.maintenance_scheduled).length,
       icon: Calendar,
       description: "Maintenance appointments",
       className: "text-blue-500",
