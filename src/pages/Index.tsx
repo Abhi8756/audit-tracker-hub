@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchBar } from "@/components/SearchBar";
@@ -8,6 +7,9 @@ import { AuditStats } from "@/components/AuditStats";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MessageCircle } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { auditService } from "@/services/auditService";
+import type { Audit } from "@/types/audit";
 import {
   Dialog,
   DialogContent,
@@ -26,63 +28,48 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 
-type Audit = {
-  id: number;
-  date: string;
-  testType: string;
-  result: string;
-  maintenanceNeeded: boolean;
-  maintenanceScheduled: string | null;
-  report: string | null;
-  completed: boolean;
-};
-
-// Mock data for demonstration
-const initialAudits: Audit[] = [
-  {
-    id: 1,
-    date: "2024-03-15",
-    testType: "Soil Compaction",
-    result: "Passed",
-    maintenanceNeeded: false,
-    maintenanceScheduled: null,
-    report: null,
-    completed: false,
-  },
-  {
-    id: 2,
-    date: "2024-03-10",
-    testType: "Concrete Strength",
-    result: "Failed",
-    maintenanceNeeded: true,
-    maintenanceScheduled: "2024-03-20",
-    report: "concrete-report-1.pdf",
-    completed: false,
-  },
-  {
-    id: 3,
-    date: "2024-03-08",
-    testType: "Foundation Analysis",
-    result: "Passed",
-    maintenanceNeeded: false,
-    maintenanceScheduled: null,
-    report: "foundation-report-1.pdf",
-    completed: true,
-  },
-];
-
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentTab, setCurrentTab] = useState("ongoing");
-  const [audits, setAudits] = useState<Audit[]>(initialAudits);
   const [newAudit, setNewAudit] = useState({
-    testType: "",
+    test_type: "",
     result: "Passed",
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: audits = [] } = useQuery({
+    queryKey: ['audits'],
+    queryFn: auditService.getAudits,
+  });
+
+  const createAuditMutation = useMutation({
+    mutationFn: async (audit: Omit<Audit, 'id' | 'created_at'>) => {
+      return auditService.createAudit(audit);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audits'] });
+      toast({
+        title: "Success",
+        description: "New audit has been created",
+      });
+      setIsDialogOpen(false);
+      setNewAudit({ test_type: "", result: "Passed" });
+      setSelectedFile(null);
+    },
+  });
+
+  const updateAuditMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: number; updates: Partial<Audit> }) => {
+      return auditService.updateAudit(id, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audits'] });
+    },
+  });
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -91,15 +78,8 @@ const Index = () => {
     }
   };
 
-  const handleFileUpload = (id: number, file: File) => {
-    const url = URL.createObjectURL(file);
-    setAudits(prevAudits => prevAudits.map(audit => 
-      audit.id === id ? { ...audit, report: url } : audit
-    ));
-  };
-
-  const handleAddAudit = () => {
-    if (!newAudit.testType) {
+  const handleAddAudit = async () => {
+    if (!newAudit.test_type) {
       toast({
         title: "Error",
         description: "Please enter a test type",
@@ -108,43 +88,49 @@ const Index = () => {
       return;
     }
 
-    const audit: Audit = {
-      id: audits.length + 1,
-      date: new Date().toISOString().split('T')[0],
-      testType: newAudit.testType,
-      result: newAudit.result,
-      maintenanceNeeded: newAudit.result === "Failed",
-      maintenanceScheduled: null,
-      report: selectedFile ? URL.createObjectURL(selectedFile) : null,
-      completed: false,
-    };
-    
-    setAudits(prevAudits => [...prevAudits, audit]);
-    setNewAudit({ testType: "", result: "Passed" });
-    setSelectedFile(null);
-    setIsDialogOpen(false);
-    
-    toast({
-      title: "Success",
-      description: "New audit has been created",
-    });
+    try {
+      let report_url = null;
+      if (selectedFile) {
+        report_url = await auditService.uploadReport(selectedFile);
+      }
+
+      const audit = {
+        date: new Date().toISOString().split('T')[0],
+        test_type: newAudit.test_type,
+        result: newAudit.result,
+        maintenance_needed: newAudit.result === "Failed",
+        maintenance_scheduled: null,
+        report_url,
+        completed: false,
+      };
+
+      await createAuditMutation.mutateAsync(audit);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create audit",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleMaintenanceChange = (id: number, checked: boolean) => {
-    setAudits(prevAudits => prevAudits.map(audit => 
-      audit.id === id ? { ...audit, maintenanceNeeded: checked } : audit
-    ));
+    updateAuditMutation.mutate({
+      id,
+      updates: { maintenance_needed: checked }
+    });
   };
 
   const handleMaintenanceScheduleChange = (id: number, date: Date | undefined) => {
-    setAudits(prevAudits => prevAudits.map(audit => 
-      audit.id === id ? { ...audit, maintenanceScheduled: date?.toISOString().split('T')[0] || null } : audit
-    ));
+    updateAuditMutation.mutate({
+      id,
+      updates: { maintenance_scheduled: date?.toISOString().split('T')[0] || null }
+    });
   };
 
   const filteredAudits = audits.filter((audit) => {
     const matchesSearch = 
-      audit.testType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      audit.test_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
       audit.result.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || audit.result.toLowerCase() === statusFilter.toLowerCase();
     const matchesTab = currentTab === "ongoing" ? !audit.completed : audit.completed;
@@ -175,8 +161,8 @@ const Index = () => {
                     <div>
                       <label className="text-sm font-medium">Test Type</label>
                       <Input
-                        value={newAudit.testType}
-                        onChange={(e) => setNewAudit({ ...newAudit, testType: e.target.value })}
+                        value={newAudit.test_type}
+                        onChange={(e) => setNewAudit({ ...newAudit, test_type: e.target.value })}
                         placeholder="Enter test type..."
                       />
                     </div>
@@ -245,7 +231,6 @@ const Index = () => {
               />
             </div>
 
-            {/* Chatbot Button */}
             <Button 
               className="fixed bottom-6 right-6 rounded-full w-12 h-12 p-0 shadow-lg hover:shadow-xl transition-shadow"
               onClick={() => window.open('https://chat.openai.com', '_blank')}
