@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchBar } from "@/components/SearchBar";
@@ -26,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -121,10 +122,10 @@ const Index = () => {
     });
   };
 
-  const handleMaintenanceScheduleChange = (id: number, date: Date | undefined) => {
+  const handleMaintenanceScheduleChange = (id: number, date: string | null) => {
     updateAuditMutation.mutate({
       id,
-      updates: { maintenance_scheduled: date?.toISOString().split('T')[0] || null }
+      updates: { maintenance_scheduled: date }
     });
   };
 
@@ -227,7 +228,6 @@ const Index = () => {
                 audits={filteredAudits}
                 onMaintenanceChange={handleMaintenanceChange}
                 onMaintenanceScheduleChange={handleMaintenanceScheduleChange}
-                onFileUpload={handleFileUpload}
               />
             </div>
 
