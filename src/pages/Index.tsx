@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { auditService } from "@/services/auditService";
 import { AddAuditDialog } from "@/components/AddAuditDialog";
 import { AuditFilters } from "@/components/AuditFilters";
+import { Audit } from "@/types/audit";
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -105,3 +106,4 @@ const Index = () => {
 };
 
 export default Index;
+
